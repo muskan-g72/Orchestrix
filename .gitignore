@@ -9,3 +9,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 outputs/
+
+# Frontend (web)
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/.env*.local
+web/*.tsbuildinfo
+web/next-env.d.ts
