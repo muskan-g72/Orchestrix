@@ -1,5 +1,7 @@
 # Orchestrix
 
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=flat&logo=postgresql&logoColor=white) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=flat&logo=python&logoColor=white) ![Alembic](https://img.shields.io/badge/Alembic-migrations-6E4C1E?style=flat) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![Groq](https://img.shields.io/badge/Groq-primary%20provider-F55036?style=flat) ![Gemini](https://img.shields.io/badge/Gemini-fallback-4285F4?style=flat&logo=googlegemini&logoColor=white) ![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=flat&logo=pytest&logoColor=white) ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)
+
 ## Overview
 
 Orchestrix is an AI execution platform for deterministic workflows, structured output validation, provider abstraction, bounded tool execution, authenticated usage controls, and persistent execution tracing.
@@ -8,11 +10,12 @@ It supports direct chat completions, schema-validated skills, and fixed sequenti
 
 ### Live demo
 
+- **Frontend:** https://orchestrix-frontend.onrender.com
 - **API Base URL:** https://orchestrix-yc6s.onrender.com
 - **Swagger UI:** https://orchestrix-yc6s.onrender.com/docs
 - **Health Check:** https://orchestrix-yc6s.onrender.com/healthz
 
-> The application is hosted on Render's free tier and may take around a minute to wake after inactivity.
+> Both the frontend and backend are hosted on Render's free tier and may each take up to a minute to wake after inactivity. If the frontend loads but shows no live metrics, the backend is likely still waking up — refresh after ~60s.
 
 ## Architecture
 
@@ -347,6 +350,7 @@ The gateway runs on `localhost:8000` and PostgreSQL on `localhost:5432`; Postgre
 
 ## Current Limitations
 
+- Frontend and backend are deployed as separate free-tier Render services; both may need to wake independently, so a first visit can take up to ~2 minutes combined.
 - Authentication uses predefined virtual keys; issuance, rotation, revocation, expiry, scopes, and JWT authentication are not implemented.
 - Workflow execution is synchronous and does not use a durable background queue.
 - Provider support is limited to Groq and Gemini.
