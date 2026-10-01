@@ -101,11 +101,16 @@ class ProviderGateway:
                 self._raise_for_failed_status(response)
 
             payload = response.json()
-            content = payload["choices"][0]["message"]["content"]
+            choice = payload["choices"][0]
+            message = choice["message"]
+            content = message.get("content")
+            finish_reason = choice.get("finish_reason")
             prompt_tokens = int(payload["usage"]["prompt_tokens"])
             completion_tokens = int(payload["usage"]["completion_tokens"])
             if not isinstance(content, str) or not content.strip():
-                raise ProviderOperationalError("primary provider returned no text")
+                raise ProviderOperationalError(
+                    f"primary provider returned no text finish_reason={finish_reason}"
+                )
             if prompt_tokens <= 0 or completion_tokens <= 0:
                 raise ProviderOperationalError(
                     "primary provider returned invalid usage"
