@@ -1,10 +1,12 @@
 from __future__ import annotations
-
 import json
+import logging
 from copy import deepcopy
 from dataclasses import dataclass, field
 from time import perf_counter
 from uuid import UUID, uuid4
+
+logger = logging.getLogger(__name__)
 
 from app.output_validation import (
     FinalResponseCandidate,
@@ -449,7 +451,8 @@ class TaskExecutor:
             )
         except ProviderConfigurationError:
             raise self._configuration_error(state) from None
-        except ProviderError:
+        except ProviderError as exc:
+            logger.warning("primary provider failed: %s: %s", type(exc).__name__, exc)
             return self._execute_fallback(prepared, state)
 
         try:
@@ -507,7 +510,8 @@ class TaskExecutor:
             )
         except ProviderConfigurationError:
             raise self._configuration_error(state) from None
-        except ProviderError:
+        except ProviderError as exc:
+            logger.warning("primary provider failed: %s: %s", type(exc).__name__, exc)
             return self._execute_fallback(prepared, state)
 
         try:
@@ -680,8 +684,9 @@ class TaskExecutor:
             )
         except ProviderConfigurationError:
             raise self._configuration_error(state) from None
-        except ProviderError:
+        except ProviderError as exc:
             if provider_name == ProviderGateway.PRIMARY_PROVIDER and self._can_call(state):
+                logger.warning("primary provider failed: %s: %s", type(exc).__name__, exc)
                 return self._execute_post_tool_fallback(prepared, state, messages)
             raise self._unavailable_error(state) from None
 
@@ -736,8 +741,9 @@ class TaskExecutor:
             )
         except ProviderConfigurationError:
             raise self._configuration_error(state) from None
-        except ProviderError:
+        except ProviderError as exc:
             if provider_name == ProviderGateway.PRIMARY_PROVIDER and self._can_call(state):
+                logger.warning("primary provider failed: %s: %s", type(exc).__name__, exc)
                 return self._execute_post_tool_fallback(prepared, state, messages)
             raise self._unavailable_error(state) from None
 

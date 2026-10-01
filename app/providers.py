@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import httpx
 
 from app.config import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class ProviderError(Exception):
@@ -37,7 +40,8 @@ class ProviderGateway:
     def complete(self, messages: list[dict[str, str]]) -> ProviderCompletion:
         try:
             return self.complete_with_provider(self.PRIMARY_PROVIDER, messages)
-        except ProviderError:
+        except ProviderError as exc:
+            logger.warning("primary provider failed: %s: %s", type(exc).__name__, exc)
             return self.complete_with_provider(self.FALLBACK_PROVIDER, messages)
 
     def complete_with_provider(
@@ -61,8 +65,12 @@ class ProviderGateway:
         if status_code in {408, 429} or (
             isinstance(status_code, int) and status_code >= 500
         ):
-            raise ProviderOperationalError("provider request failed operationally")
-        raise ProviderConfigurationError("provider request configuration was rejected")
+            raise ProviderOperationalError(
+                f"provider request failed operationally status={status_code}"
+            )
+        raise ProviderConfigurationError(
+            f"provider request configuration was rejected status={status_code}"
+        )
 
     def _complete_with_groq(
         self,
@@ -104,9 +112,9 @@ class ProviderGateway:
                 )
         except ProviderError:
             raise
-        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError):
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise ProviderOperationalError(
-                "primary provider response was unusable"
+                f"primary provider response was unusable: {type(exc).__name__}"
             ) from None
 
         return ProviderCompletion(
@@ -179,9 +187,9 @@ class ProviderGateway:
                 )
         except ProviderError:
             raise
-        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError):
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise ProviderOperationalError(
-                "fallback provider response was unusable"
+                f"fallback provider response was unusable: {type(exc).__name__}"
             ) from None
 
         return ProviderCompletion(
