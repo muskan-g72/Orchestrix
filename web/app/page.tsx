@@ -100,12 +100,12 @@ export default function LandingPage() {
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4 pt-2">
-              <a href="#lifecycle">
+              <Link href="/dashboard">
                 <Button variant="primary" size="lg">
                   Open dashboard
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
-              </a>
+              </Link>
 
               <a
                 href="https://orchestrix-yc6s.onrender.com/docs"

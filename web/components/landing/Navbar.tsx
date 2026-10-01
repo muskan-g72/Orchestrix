@@ -50,9 +50,6 @@ export function Navbar() {
           <a href="#timeline" className="hover:text-text transition-colors">
             Timeline
           </a>
-          <Link href="/design" className="hover:text-text transition-colors text-violet">
-            Design Tokens
-          </Link>
         </div>
 
         {/* CTAs */}

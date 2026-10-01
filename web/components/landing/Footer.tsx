@@ -1,7 +1,6 @@
 import React from "react";
-import Link from "next/link";
 import { Pill } from "@/components/Pill";
-import { ShieldCheck, GitFork, ArrowUpRight, Code2 } from "lucide-react";
+import { ShieldCheck, ArrowUpRight } from "lucide-react";
 
 export function Footer() {
   return (
@@ -54,9 +53,6 @@ export function Footer() {
               Swagger Docs
               <ArrowUpRight className="h-3 w-3 opacity-70" />
             </a>
-            <Link href="/design" className="hover:text-violet transition-colors">
-              Design System
-            </Link>
           </div>
         </div>
       </div>
