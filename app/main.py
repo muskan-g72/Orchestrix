@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import FastAPI, Header, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.config import get_settings
@@ -71,6 +72,30 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
+
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_virtual_key(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer_scheme),
+    ],
+) -> str:
+    if credentials is None or not credentials.credentials.strip():
+        raise HTTPException(
+            status_code=401,
+            detail="missing or unknown virtual key",
+        )
+
+    return credentials.credentials.strip()
+
+
+def _normalize_key(key: str) -> str:
+    cleaned = key.strip()
+    if cleaned.lower().startswith("bearer "):
+        cleaned = cleaned.split(None, 1)[1].strip()
+    return cleaned
 
 
 class ChatMessage(BaseModel):
@@ -285,22 +310,12 @@ class WorkflowTraceResponse(BaseModel):
     steps: list[WorkflowTraceStepResponse]
 
 
-def _virtual_key(authorization: str | None) -> str:
-    if authorization is None:
-        raise HTTPException(status_code=401, detail="missing or unknown virtual key")
-
-    pieces = authorization.strip().split(None, 1)
-    if len(pieces) != 2 or pieces[0].lower() != "bearer" or not pieces[1].strip():
-        raise HTTPException(status_code=401, detail="missing or unknown virtual key")
-    return pieces[1].strip()
-
-
 @app.post("/v1/chat/completions", response_model=ChatResponse)
 def chat_completions(
     request: ChatRequest,
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> ChatResponse:
-    key = _virtual_key(authorization)
+    key = _normalize_key(key)
     reservation = store.reserve_request(key)
     if reservation == "unknown":
         raise HTTPException(status_code=401, detail="missing or unknown virtual key")
@@ -371,9 +386,9 @@ def _settle_failed_task(
 @app.post("/v1/tasks/execute", response_model=TaskResponse)
 def execute_task(
     request: TaskRequest,
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> TaskResponse:
-    key = _virtual_key(authorization)
+    key = _normalize_key(key)
     if store.get_usage(key) is None:
         raise HTTPException(status_code=401, detail="missing or unknown virtual key")
 
@@ -515,9 +530,9 @@ def _workflow_step_response(step: WorkflowStepResult) -> WorkflowStepResponse:
 @app.post("/v1/workflows/execute", response_model=WorkflowResponse)
 def execute_workflow(
     request: WorkflowRequest,
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> WorkflowResponse:
-    key = _virtual_key(authorization)
+    key = _normalize_key(key)
     if store.get_usage(key) is None:
         raise HTTPException(status_code=401, detail="missing or unknown virtual key")
 
@@ -656,9 +671,9 @@ def execute_workflow(
 @app.get("/v1/workflows/{workflow_id}", response_model=WorkflowTraceResponse)
 def get_workflow_trace(
     workflow_id: str,
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> WorkflowTraceResponse:
-    key = _virtual_key(authorization)
+    key = _normalize_key(key)
     if store.get_usage(key) is None:
         raise HTTPException(status_code=401, detail="missing or unknown virtual key")
 
@@ -723,9 +738,9 @@ def get_workflow_trace(
 )
 def get_task_trace(
     task_id: str,
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> TaskTraceResponse:
-    key = _virtual_key(authorization)
+    key = _normalize_key(key)
     if store.get_usage(key) is None:
         raise HTTPException(status_code=401, detail="missing or unknown virtual key")
 
@@ -780,8 +795,8 @@ def get_task_trace(
     )
 
 
-def _authenticated_owner_id(authorization: str | None) -> str:
-    key = _virtual_key(authorization)
+def _authenticated_owner_id(key: str) -> str:
+    key = _normalize_key(key)
     if store.get_usage(key) is None:
         raise HTTPException(status_code=401, detail="missing or unknown virtual key")
     return virtual_key_identifier(key)
@@ -789,9 +804,9 @@ def _authenticated_owner_id(authorization: str | None) -> str:
 
 @app.get("/v1/preferences", response_model=PreferencesResponse)
 def get_preferences(
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> PreferencesResponse:
-    owner_id = _authenticated_owner_id(authorization)
+    owner_id = _authenticated_owner_id(key)
     try:
         preferences = PreferenceService(store).get(owner_id)
     except Exception:
@@ -802,9 +817,9 @@ def get_preferences(
 @app.put("/v1/preferences", response_model=PreferencesResponse)
 def put_preferences(
     request: PreferencesRequest,
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> PreferencesResponse:
-    owner_id = _authenticated_owner_id(authorization)
+    owner_id = _authenticated_owner_id(key)
     try:
         preferences = PreferenceService(store).put(
             owner_id,
@@ -820,9 +835,9 @@ def put_preferences(
 @app.delete("/v1/preferences/{preference_key}", status_code=204)
 def delete_preference(
     preference_key: str,
-    authorization: Annotated[str | None, Header()] = None,
+    key: Annotated[str, Depends(get_virtual_key)],
 ) -> Response:
-    owner_id = _authenticated_owner_id(authorization)
+    owner_id = _authenticated_owner_id(key)
     try:
         PreferenceService(store).delete(owner_id, preference_key)
     except PreferenceError:
