@@ -197,3 +197,33 @@ def test_gemini_generic_httperror_includes_exception_type(
         gateway._complete_with_gemini([{"role": "user", "content": "hello"}])
 
     assert str(exc_info.value) == "fallback provider response was unusable: ReadTimeout"
+
+
+def test_groq_payload_includes_reasoning_format_hidden(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gateway = ProviderGateway(_settings())
+    captured: dict[str, Any] = {}
+
+    class FakeResponse:
+        is_success = True
+
+        def json(self) -> dict[str, Any]:
+            return {
+                "choices": [{"message": {"content": "response"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+            }
+
+    def fake_post(url: str, **kwargs: Any) -> Any:
+        captured["url"] = url
+        captured.update(kwargs)
+        return FakeResponse()
+
+    monkeypatch.setattr("app.providers.httpx.post", fake_post)
+    completion = gateway._complete_with_groq([{"role": "user", "content": "hello"}])
+
+    assert completion.content == "response"
+    assert captured["json"]["reasoning_format"] == "hidden"
+    assert captured["json"]["reasoning_effort"] == "low"
+    assert captured["json"]["max_completion_tokens"] == 512
+

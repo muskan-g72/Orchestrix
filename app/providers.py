@@ -94,6 +94,7 @@ class ProviderGateway:
                     "stream": False,
                     "max_completion_tokens": 512,
                     "reasoning_effort": "low",
+                    "reasoning_format": "hidden",
                 },
                 timeout=self.settings.provider_timeout_seconds,
             )
